@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import * as ort from 'onnxruntime-web';
+import { useToast } from '../components/Toast';
 
 interface Props {
   onNavigate: (page: string) => void;
@@ -35,6 +36,7 @@ const MatrixView: React.FC<{
 );
 
 const MatMulPage: React.FC<Props> = ({ onNavigate }) => {
+  const { showToast } = useToast();
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState('');
   const [result, setResult] = useState<RunResult | null>(null);
@@ -61,11 +63,14 @@ const MatMulPage: React.FC<Props> = ({ onNavigate }) => {
       const outputData = results.c.data as Float32Array;
       setResult({ outputData, loadTimeMs, inferTimeMs });
       setStatus('success');
+      showToast('行列演算が成功しました', 'success');
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
       setStatus('error');
+      showToast(msg, 'error');
     }
-  }, []);
+  }, [showToast]);
 
   return (
     <div className="app-container">

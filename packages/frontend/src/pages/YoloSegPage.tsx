@@ -2,11 +2,13 @@ import React, { useState, useRef, useCallback } from 'react';
 import * as ort from 'onnxruntime-web';
 import {
   preprocessImage,
-  postprocessYoloSeg,
   drawSegmentationResults,
   type SegResult,
 } from '../lib/yoloSeg';
 import { COCO_LABELS, getClassColor, getClassColorSolid } from '../lib/cocoLabels';
+import { YoloWorkerClient } from '../lib/yoloWorkerClient';
+import client from '../lib/hc';
+import { useToast } from '../components/Toast';
 
 interface Props {
   onNavigate: (page: string) => void;
@@ -40,11 +42,14 @@ const YoloSegPage: React.FC<Props> = ({ onNavigate }) => {
   const [segResult, setSegResult] = useState<SegResult | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
   const [confThreshold, setConfThreshold] = useState(0.25);
+  const [isSaving, setIsSaving] = useState(false);
+  const { showToast } = useToast();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionRef = useRef<ort.InferenceSession | null>(null);
+  const workerClientRef = useRef<YoloWorkerClient | null>(null);
 
   /** 画像を読み込んで推論を実行する */
   const runSegmentation = useCallback(async (imgSrc: string) => {
@@ -98,7 +103,11 @@ const YoloSegPage: React.FC<Props> = ({ onNavigate }) => {
       const output0 = results['output0'].data as Float32Array;
       const output1 = results['output1'].data as Float32Array;
 
-      const result = postprocessYoloSeg(
+      if (!workerClientRef.current) {
+        workerClientRef.current = new YoloWorkerClient();
+      }
+
+      const result = await workerClientRef.current.postprocess(
         output0,
         output1,
         confThreshold,
@@ -132,10 +141,32 @@ const YoloSegPage: React.FC<Props> = ({ onNavigate }) => {
       setSegResult(result);
       setStatus('done');
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
       setStatus('error');
+      showToast(msg, 'error');
     }
-  }, [confThreshold]);
+  }, [confThreshold, showToast]);
+
+  /** 保存処理 */
+  const handleSave = useCallback(async () => {
+    if (!segResult || isSaving) return;
+    setIsSaving(true);
+    try {
+      const res = await client.api.detections.$post({
+        json: segResult as any
+      });
+      if (res.ok) {
+        showToast('履歴に保存しました', 'success');
+      } else {
+        showToast('保存に失敗しました', 'error');
+      }
+    } catch (err) {
+      showToast('通信エラーが発生しました', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [segResult, isSaving, showToast]);
 
   /** ファイル選択ハンドラ */
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,6 +202,13 @@ const YoloSegPage: React.FC<Props> = ({ onNavigate }) => {
     'done': '✅ 完了',
     'error': `❌ エラー: ${error}`,
   };
+
+  // クリーンアップ
+  React.useEffect(() => {
+    return () => {
+      workerClientRef.current?.terminate();
+    };
+  }, []);
 
   return (
     <div className="app-container">
@@ -274,6 +312,16 @@ const YoloSegPage: React.FC<Props> = ({ onNavigate }) => {
           <div className="card__header">
             <div className="card__icon card__icon--success">🎯</div>
             <h2 className="card__title">セグメンテーション結果</h2>
+            {status === 'done' && (
+              <button 
+                className={`btn btn--primary btn--sm ${isSaving ? 'btn--loading' : ''}`}
+                style={{ marginLeft: 'auto' }}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? '保存中...' : '💾 履歴に保存'}
+              </button>
+            )}
           </div>
           <div className="result-canvas-wrapper">
             <canvas ref={canvasRef} className="result-canvas" />

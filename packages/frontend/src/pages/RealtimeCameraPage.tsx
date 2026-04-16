@@ -1,12 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   preprocessImage,
-  postprocessYoloSeg,
   drawSegmentationResults,
   MODEL_INPUT_SIZE,
   type SegResult,
 } from '../lib/yoloSeg';
 import { COCO_LABELS, getClassColor, getClassColorSolid } from '../lib/cocoLabels';
+import { YoloWorkerClient } from '../lib/yoloWorkerClient';
+import client from '../lib/hc';
+import { useToast } from '../components/Toast';
 
 interface Props {
   onNavigate: (page: string) => void;
@@ -20,6 +22,7 @@ type Backend = 'webgpu' | 'wasm' | 'detecting';
  * WebGPU 優先 → WASM フォールバック
  */
 const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
+  const { showToast } = useToast();
   const [status, setStatus] = useState<Status>('idle');
   const [backend, setBackend] = useState<Backend>('detecting');
   const [error, setError] = useState('');
@@ -27,6 +30,8 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
   const [confThreshold, setConfThreshold] = useState(0.3);
   const [detectionCount, setDetectionCount] = useState(0);
   const [inferenceTime, setInferenceTime] = useState(0);
+  const [postprocessTime, setPostprocessTime] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('environment');
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -34,10 +39,12 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const sessionRef = useRef<any>(null);
   const ortRef = useRef<any>(null);
+  const workerClientRef = useRef<YoloWorkerClient | null>(null);
   const runningRef = useRef(false);
   const processingRef = useRef(false);
   const streamRef = useRef<MediaStream | null>(null);
   const fpsTimesRef = useRef<number[]>([]);
+  const lastResultRef = useRef<SegResult | null>(null);
   const confRef = useRef(confThreshold);
 
   // confThreshold の ref を最新値に保つ
@@ -153,11 +160,31 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
       const inferMs = performance.now() - t0;
       setInferenceTime(inferMs);
 
-      // 4. 後処理
+      // 4. 後処理 (Web Worker に移譲)
+      const tPost0 = performance.now();
       const output0 = results['output0'].data as Float32Array;
       const output1 = results['output1'].data as Float32Array;
-      const segResult = postprocessYoloSeg(output0, output1, confRef.current, 0.45, COCO_LABELS);
+
+      // workerClient がない場合はメインスレッドでフォールバック (基本はあり)
+      let segResult: SegResult;
+      if (workerClientRef.current) {
+        segResult = await workerClientRef.current.postprocess(
+          output0,
+          output1,
+          confRef.current,
+          0.45,
+          COCO_LABELS
+        );
+      } else {
+        // フォールバック用の import が必要になるため、基本は worker を使う
+        // ここではランタイムエラー回避のため型定義のみ
+        throw new Error('Worker client is not initialized');
+      }
+      
+      const postMs = performance.now() - tPost0;
+      setPostprocessTime(postMs);
       setDetectionCount(segResult.detections.length);
+      lastResultRef.current = segResult;
 
       // 5. 描画
       // canvas にビデオフレームが描画済みなので、それをベースに overlay に結果を描画
@@ -284,7 +311,12 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
         executionProviders: eps,
       });
 
-      // 4. ループ開始
+      // 4. Worker 初期化
+      if (!workerClientRef.current) {
+        workerClientRef.current = new YoloWorkerClient();
+      }
+
+      // 5. ループ開始
       setStatus('running');
       runningRef.current = true;
       fpsTimesRef.current = [];
@@ -307,9 +339,38 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
       videoRef.current.srcObject = null;
     }
     sessionRef.current = null;
+    
+    if (workerClientRef.current) {
+      workerClientRef.current.terminate();
+      workerClientRef.current = null;
+    }
+
     setStatus('stopped');
     setFps(0);
+    lastResultRef.current = null;
   }, []);
+
+  /** 現在の結果を DB に保存する */
+  const handleSave = useCallback(async () => {
+    if (!lastResultRef.current || isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const res = await client.api.detections.$post({
+        json: lastResultRef.current as any
+      });
+      
+      if (res.ok) {
+        showToast('履歴に保存しました', 'success');
+      } else {
+        showToast('保存に失敗しました', 'error');
+      }
+    } catch (err) {
+      showToast('通信エラーが発生しました', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [isSaving]);
 
   /** カメラ切り替え */
   const handleFlipCamera = useCallback(async () => {
@@ -326,6 +387,9 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
       runningRef.current = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
+      }
+      if (workerClientRef.current) {
+        workerClientRef.current.terminate();
       }
     };
   }, []);
@@ -361,10 +425,23 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
             <div className="hud__value">{inferenceTime.toFixed(0)}</div>
             <div className="hud__label">推論 ms</div>
           </div>
+          <div className="hud__item" title="Web Worker による後処理時間">
+            <div className="hud__value">{postprocessTime.toFixed(0)}</div>
+            <div className="hud__label">後処理 ms</div>
+          </div>
           <div className="hud__item">
             <div className="hud__value">{detectionCount}</div>
             <div className="hud__label">検出数</div>
           </div>
+          <button 
+            className={`hud__item hud__item--action ${isSaving ? 'hud__item--loading' : ''}`}
+            onClick={handleSave}
+            disabled={status !== 'running' || detectionCount === 0 || isSaving}
+            title="現在の結果を保存"
+          >
+            <div className="hud__value">{isSaving ? '...' : '💾'}</div>
+            <div className="hud__label">保存</div>
+          </button>
           <div className={`hud__item hud__item--backend ${backend === 'webgpu' ? 'hud__item--gpu' : ''}`}>
             <div className="hud__value">{backend === 'webgpu' ? 'GPU' : 'CPU'}</div>
             <div className="hud__label">{backend.toUpperCase()}</div>

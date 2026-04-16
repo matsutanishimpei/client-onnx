@@ -39,11 +39,9 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
           <h2 className="demo-card__title">行列乗算 (MatMul)</h2>
           <p className="demo-card__description">
             公式 Quick Start モデルで行列 A×B の乗算を WASM バックエンドで実行。
-            ONNX Runtime Web の基本的な使い方を学べます。
           </p>
           <div className="demo-card__tags">
             <span className="tag tag--blue">MatMul</span>
-            <span className="tag tag--purple">Quick Start</span>
             <span className="tag tag--gray">~120B</span>
           </div>
           <div className="demo-card__arrow">→</div>
@@ -60,15 +58,13 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
               <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
-          <h2 className="demo-card__title">YOLO インスタンスセグメンテーション</h2>
+          <h2 className="demo-card__title">YOLO セグメント</h2>
           <p className="demo-card__description">
-            YOLOv8n-seg で画像内のオブジェクトを検出＆ピクセル単位で
-            セグメンテーション。80 クラスの物体を認識します。
+            画像をアップロードして物体検出と領域分割を実行。
           </p>
           <div className="demo-card__tags">
             <span className="tag tag--cyan">YOLOv8</span>
             <span className="tag tag--green">Segmentation</span>
-            <span className="tag tag--gray">~13MB</span>
           </div>
           <div className="demo-card__arrow">→</div>
         </button>
@@ -85,16 +81,38 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
             </svg>
           </div>
-          <h2 className="demo-card__title">リアルタイムカメラ検出</h2>
+          <h2 className="demo-card__title">リアルタイム検出</h2>
           <p className="demo-card__description">
-            カメラ映像をリアルタイムに解析。WebGPU 対応ブラウザでは
-            GPU アクセラレーションで高速推論を実現します。
+            カメラ映像を解析。WebGPU 対応で高速推論。
           </p>
           <div className="demo-card__tags">
             <span className="tag tag--cyan">YOLOv8</span>
             <span className="tag tag--orange">WebGPU</span>
-            <span className="tag tag--green">Real-time</span>
-            <span className="tag tag--gray">~13MB</span>
+            <span className="tag tag--green">Live</span>
+          </div>
+          <div className="demo-card__arrow">→</div>
+        </button>
+
+        {/* 履歴ページ */}
+        <button
+          id="nav-history"
+          className="demo-card"
+          onClick={() => onNavigate('history')}
+        >
+          <div className="demo-card__icon demo-card__icon--info">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v13a2 2 0 01-2 2z" />
+              <path d="M17 21v-8H7v8" />
+              <path d="M7 3v5h8" />
+            </svg>
+          </div>
+          <h2 className="demo-card__title">推論履歴</h2>
+          <p className="demo-card__description">
+            DB に保存された過去の解析結果を確認・振り返り。
+          </p>
+          <div className="demo-card__tags">
+            <span className="tag tag--blue">D1 Database</span>
+            <span className="tag tag--purple">History</span>
           </div>
           <div className="demo-card__arrow">→</div>
         </button>
@@ -111,28 +129,28 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
             <div className="info-item__icon">⚡</div>
             <div className="info-item__text">
               <strong>ONNX Runtime Web</strong><br />
-              WebAssembly ベースの高速推論
+              WebAssembly / WebGPU
             </div>
           </div>
           <div className="info-item">
             <div className="info-item__icon">⚛️</div>
             <div className="info-item__text">
               <strong>React + Vite</strong><br />
-              高速な開発サーバー & HMR
+              Fast Development
+            </div>
+          </div>
+          <div className="info-item">
+            <div className="info-item__icon">💾</div>
+            <div className="info-item__text">
+              <strong>Cloudflare D1</strong><br />
+              Serverless DB
             </div>
           </div>
           <div className="info-item">
             <div className="info-item__icon">🌐</div>
             <div className="info-item__text">
-              <strong>ブラウザ完結</strong><br />
-              サーバー送信不要・プライバシー保護
-            </div>
-          </div>
-          <div className="info-item">
-            <div className="info-item__icon">📦</div>
-            <div className="info-item__text">
-              <strong>ONNX 形式</strong><br />
-              フレームワーク非依存の標準モデルフォーマット
+              <strong>Hono + Workers</strong><br />
+              Type-safe Edge API
             </div>
           </div>
         </div>
