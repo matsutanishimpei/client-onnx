@@ -5,9 +5,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:backend": "npm run dev --workspace=@my-app/backend",
     "dev:frontend": "npm run dev --workspace=@my-app/frontend",
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace=@my-app/frontend",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:ui": "vitest --ui"

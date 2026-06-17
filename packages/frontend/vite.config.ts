@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: process.env.GITHUB_ACTIONS ? '/client-onnx/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -32,28 +33,26 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // キャッシュ対象の拡張子。onnx や wasm を含める
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,onnx,wasm}'],
-        // ONNX モデルは約14MBあるため、キャッシュ許容サイズを20MBまで拡大
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,onnx,wasm,mjs}'],
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
       },
     }),
   ],
+  assetsInclude: ['**/*.wasm'],
   resolve: {
     alias: {
       '@my-app/shared': path.resolve(__dirname, '../shared/src/index.ts'),
     },
   },
   optimizeDeps: {
-    exclude: ['onnxruntime-web'],
+    // onnxruntime-web を pre-bundling から除外し、内部の動的 import() が
+    // node_modules 内の .mjs / .wasm を直接解決できるようにする
+    exclude: ['onnxruntime-web', 'onnxruntime-web/webgpu'],
+  },
+  worker: {
+    format: 'es',
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8787',
-        changeOrigin: true,
-      },
-    },
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',

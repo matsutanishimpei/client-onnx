@@ -14,10 +14,9 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
           </svg>
           ONNX Runtime Web
         </div>
-        <h1 className="header__title">AI デモ ポータル</h1>
+        <h1 className="header__title">Web AI デモアプリ</h1>
         <p className="header__subtitle">
-          ONNX Runtime Web を使用したブラウザ上での AI 推論デモ集。
-          WebAssembly により、サーバー不要でリアルタイム推論が可能です。
+          サーバーとの通信を行わず、お使いのブラウザ内だけで安全かつ高速に人工知能の計算（推論）を行う最先端のデモアプリです。
         </p>
       </header>
 
@@ -36,38 +35,17 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
               <rect x="14" y="14" width="7" height="7" rx="1" />
             </svg>
           </div>
-          <h2 className="demo-card__title">行列乗算 (MatMul)</h2>
+          <h2 className="demo-card__title">行列の掛け算 (MatMul)</h2>
           <p className="demo-card__description">
-            公式 Quick Start モデルで行列 A×B の乗算を WASM バックエンドで実行。
+            AIモデルの最も基本的な計算である「行列の乗算」をブラウザ（WASM方式）で直接行い、正しい結果が即座に出るかテストできます。
           </p>
           <div className="demo-card__tags">
-            <span className="tag tag--blue">MatMul</span>
-            <span className="tag tag--gray">~120B</span>
+            <span className="tag tag--blue">WASM 動作テスト</span>
+            <span className="tag tag--gray">基本計算</span>
           </div>
           <div className="demo-card__arrow">→</div>
         </button>
 
-        {/* YOLO セグメンテーション */}
-        <button
-          id="nav-yolo-seg"
-          className="demo-card"
-          onClick={() => onNavigate('yolo-seg')}
-        >
-          <div className="demo-card__icon demo-card__icon--accent">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
-              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <h2 className="demo-card__title">YOLO セグメント</h2>
-          <p className="demo-card__description">
-            画像をアップロードして物体検出と領域分割を実行。
-          </p>
-          <div className="demo-card__tags">
-            <span className="tag tag--cyan">YOLOv8</span>
-            <span className="tag tag--green">Segmentation</span>
-          </div>
-          <div className="demo-card__arrow">→</div>
-        </button>
 
         {/* リアルタイムカメラ */}
         <button
@@ -81,76 +59,53 @@ const HomePage: React.FC<Props> = ({ onNavigate }) => {
               <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
             </svg>
           </div>
-          <h2 className="demo-card__title">リアルタイム検出</h2>
+          <h2 className="demo-card__title">カメラでリアルタイムAI検出</h2>
           <p className="demo-card__description">
-            カメラ映像を解析。WebGPU 対応で高速推論。
+            カメラの映像を解析し、写っている物を瞬時に検出して色付きでわかりやすく切り分けます。WebGPU対応デバイスならさらに滑らかに動きます。
           </p>
           <div className="demo-card__tags">
             <span className="tag tag--cyan">YOLOv8</span>
-            <span className="tag tag--orange">WebGPU</span>
-            <span className="tag tag--green">Live</span>
+            <span className="tag tag--orange">WebGPU 高速化</span>
+            <span className="tag tag--green">カメラ対応</span>
           </div>
           <div className="demo-card__arrow">→</div>
         </button>
 
-        {/* 履歴ページ */}
-        <button
-          id="nav-history"
-          className="demo-card"
-          onClick={() => onNavigate('history')}
-        >
-          <div className="demo-card__icon demo-card__icon--info">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
-              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v13a2 2 0 01-2 2z" />
-              <path d="M17 21v-8H7v8" />
-              <path d="M7 3v5h8" />
-            </svg>
-          </div>
-          <h2 className="demo-card__title">推論履歴</h2>
-          <p className="demo-card__description">
-            DB に保存された過去の解析結果を確認・振り返り。
-          </p>
-          <div className="demo-card__tags">
-            <span className="tag tag--blue">D1 Database</span>
-            <span className="tag tag--purple">History</span>
-          </div>
-          <div className="demo-card__arrow">→</div>
-        </button>
       </div>
 
       {/* 技術スタック */}
       <section className="card fade-in fade-in-delay-2" style={{ marginTop: '2rem' }}>
         <div className="card__header">
           <div className="card__icon card__icon--primary">🛠</div>
-          <h2 className="card__title">技術スタック</h2>
+          <h2 className="card__title">本システムの特徴・技術</h2>
         </div>
         <div className="info-grid">
           <div className="info-item">
             <div className="info-item__icon">⚡</div>
             <div className="info-item__text">
               <strong>ONNX Runtime Web</strong><br />
-              WebAssembly / WebGPU
+              ブラウザの中でAIモデルを動かす標準的な実行エンジンです。
             </div>
           </div>
           <div className="info-item">
             <div className="info-item__icon">⚛️</div>
             <div className="info-item__text">
               <strong>React + Vite</strong><br />
-              Fast Development
+              画面表示を素早く行い、快適な操作感を提供するための仕組みです。
             </div>
           </div>
           <div className="info-item">
-            <div className="info-item__icon">💾</div>
+            <div className="info-item__icon">🔒</div>
             <div className="info-item__text">
-              <strong>Cloudflare D1</strong><br />
-              Serverless DB
+              <strong>安心の完全プライベート</strong><br />
+              カメラ画像などの全ての情報は端末から送信されず、手元で処理されます。
             </div>
           </div>
           <div className="info-item">
-            <div className="info-item__icon">🌐</div>
+            <div className="info-item__icon">✈️</div>
             <div className="info-item__text">
-              <strong>Hono + Workers</strong><br />
-              Type-safe Edge API
+              <strong>オフライン動作 (PWA)</strong><br />
+              一度読み込めば、電波の繋がらない場所でもカメラAI機能をご利用いただけます。
             </div>
           </div>
         </div>

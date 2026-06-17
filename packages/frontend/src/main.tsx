@@ -5,10 +5,7 @@ import './index.css';
 
 import HomePage from './pages/HomePage';
 import MatMulPage from './pages/MatMulPage';
-import YoloSegPage from './pages/YoloSegPage';
 import RealtimeCameraPage from './pages/RealtimeCameraPage';
-import HistoryPage from './pages/HistoryPage';
-import client from './lib/hc';
 import { ToastProvider } from './components/Toast';
 // @ts-ignore: virtual:pwa-register is provided by vite-plugin-pwa
 import { registerSW } from 'virtual:pwa-register';
@@ -16,18 +13,15 @@ import { registerSW } from 'virtual:pwa-register';
 // Service Worker の自動更新登録
 registerSW({ immediate: true });
 
-// ONNX Runtime の WASM ファイルを CDN から読み込む設定
-const ORT_VERSION = (ort.env as any).versions?.web ?? '1.24.3';
-ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+// ONNX Runtime: optimizeDeps.exclude により node_modules から直接解決されるため wasmPaths は不要
 
 /**
  * ハッシュベースの簡易ルーター
  * #matmul → MatMulPage
- * #yolo-seg → YoloSegPage
  * #realtime-camera → RealtimeCameraPage
  * それ以外 → HomePage
  */
-const VALID_PAGES = ['matmul', 'yolo-seg', 'realtime-camera', 'history'] as const;
+const VALID_PAGES = ['matmul', 'realtime-camera'] as const;
 
 function getPageFromHash(): string {
   const hash = window.location.hash.replace('#', '');
@@ -45,27 +39,9 @@ const App: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // グローバルエラー監視 (監視・ロギング用)
-    const handleError = (event: ErrorEvent | PromiseRejectionEvent) => {
-      const errorData = {
-        message: 'message' in event ? event.message : (event as any).reason?.message || 'Unknown Promise Rejection',
-        type: event.type,
-        url: window.location.href,
-        timestamp: new Date().toISOString()
-      };
-      
-      // バックエンドにログを送信 (非同期・Fire and forget)
-      client.api.logs.$post({ json: errorData }).catch(() => {});
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleError);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleError);
     };
   }, []);
 
@@ -85,12 +61,8 @@ const App: React.FC = () => {
     switch (page) {
       case 'matmul':
         return <MatMulPage onNavigate={navigate} />;
-      case 'yolo-seg':
-        return <YoloSegPage onNavigate={navigate} />;
       case 'realtime-camera':
         return <RealtimeCameraPage onNavigate={navigate} />;
-      case 'history':
-        return <HistoryPage onNavigate={navigate} />;
       default:
         return <HomePage onNavigate={navigate} />;
     }

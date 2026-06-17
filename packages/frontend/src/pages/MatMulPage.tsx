@@ -50,7 +50,7 @@ const MatMulPage: React.FC<Props> = ({ onNavigate }) => {
     setResult(null);
     try {
       const t0 = performance.now();
-      const session = await ort.InferenceSession.create('/model.onnx');
+      const session = await ort.InferenceSession.create(import.meta.env.BASE_URL + 'model.onnx');
       const loadTimeMs = performance.now() - t0;
 
       const tensorA = new ort.Tensor('float32', Float32Array.from(dataA), INPUT_A_SHAPE);

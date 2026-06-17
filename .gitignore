@@ -6,3 +6,7 @@ tmp
 .DS_Store
 *.log
 .agent
+
+# ONNX Runtime Web WASM binaries in public (Excluded from Git)
+packages/frontend/public/wasm/
+

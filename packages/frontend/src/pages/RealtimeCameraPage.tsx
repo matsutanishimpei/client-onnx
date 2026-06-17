@@ -7,7 +7,6 @@ import {
 } from '../lib/yoloSeg';
 import { COCO_LABELS, getClassColor, getClassColorSolid } from '../lib/cocoLabels';
 import { YoloWorkerClient } from '../lib/yoloWorkerClient';
-import client from '../lib/hc';
 import { useToast } from '../components/Toast';
 
 interface Props {
@@ -31,7 +30,6 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
   const [detectionCount, setDetectionCount] = useState(0);
   const [inferenceTime, setInferenceTime] = useState(0);
   const [postprocessTime, setPostprocessTime] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('environment');
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -83,9 +81,7 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
       setBackend('wasm');
     }
 
-    // CDN から WASM ファイルを読み込む
-    const version = (ort.env as any).versions?.web ?? '1.24.3';
-    ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${version}/dist/`;
+    // optimizeDeps.exclude により wasmPaths 不要（node_modules から直接解決）
 
     ortRef.current = ort;
     return { ort, hasWebGPU };
@@ -307,7 +303,7 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
 
       // 3. セッション作成
       const eps = hasWebGPU ? ['webgpu', 'wasm'] : ['wasm'];
-      sessionRef.current = await ort.InferenceSession.create('/yolov8n-seg.onnx', {
+      sessionRef.current = await ort.InferenceSession.create(import.meta.env.BASE_URL + 'yolov8n-seg.onnx', {
         executionProviders: eps,
       });
 
@@ -349,28 +345,6 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
     setFps(0);
     lastResultRef.current = null;
   }, []);
-
-  /** 現在の結果を DB に保存する */
-  const handleSave = useCallback(async () => {
-    if (!lastResultRef.current || isSaving) return;
-    
-    setIsSaving(true);
-    try {
-      const res = await client.api.detections.$post({
-        json: lastResultRef.current as any
-      });
-      
-      if (res.ok) {
-        showToast('履歴に保存しました', 'success');
-      } else {
-        showToast('保存に失敗しました', 'error');
-      }
-    } catch (err) {
-      showToast('通信エラーが発生しました', 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [isSaving]);
 
   /** カメラ切り替え */
   const handleFlipCamera = useCallback(async () => {
@@ -433,15 +407,6 @@ const RealtimeCameraPage: React.FC<Props> = ({ onNavigate }) => {
             <div className="hud__value">{detectionCount}</div>
             <div className="hud__label">検出数</div>
           </div>
-          <button 
-            className={`hud__item hud__item--action ${isSaving ? 'hud__item--loading' : ''}`}
-            onClick={handleSave}
-            disabled={status !== 'running' || detectionCount === 0 || isSaving}
-            title="現在の結果を保存"
-          >
-            <div className="hud__value">{isSaving ? '...' : '💾'}</div>
-            <div className="hud__label">保存</div>
-          </button>
           <div className={`hud__item hud__item--backend ${backend === 'webgpu' ? 'hud__item--gpu' : ''}`}>
             <div className="hud__value">{backend === 'webgpu' ? 'GPU' : 'CPU'}</div>
             <div className="hud__label">{backend.toUpperCase()}</div>
